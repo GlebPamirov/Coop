@@ -5,24 +5,119 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Явка</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { background-color: #f4f6f8; color: #333; padding: 12px; display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: 0 auto; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    }
     
-    h2 { text-align: center; color: #2c3e50; font-size: 1.2rem; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body { 
+      background-color: #f4f6f8; 
+      color: #333; 
+      padding: 12px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px; 
+      max-width: 500px; 
+      margin: 0 auto; 
+    }
     
-    .card { background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    h2 { text-align: center; color: #2c3e50; font-size: 1.1rem; flex-shrink: 0; }
+    
+    .card { 
+      background: #fff; 
+      border-radius: 10px; 
+      padding: 12px; 
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
+      flex-shrink: 0;
+    }
+
+    /* Нижняя карточка с полем результата растягивается на всю оставшуюся высоту */
+    .card-output {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* Важно для дочернего textarea */
+    }
     
     label { font-size: 0.85rem; font-weight: 600; color: #666; display: block; margin-bottom: 4px; }
     
-    input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; outline: none; }
+    .search-container {
+      position: relative;
+    }
+
+    input[type="text"] { 
+      width: 100%; 
+      padding: 10px; 
+      border: 1px solid #ccc; 
+      border-radius: 6px; 
+      font-size: 1rem; 
+      outline: none; 
+    }
     input[type="text"]:focus { border-color: #3498db; }
 
-    .selected-box { margin-top: 10px; background: #eef7fe; border: 1px solid #bce1fe; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 0.95rem; min-height: 42px; display: flex; align-items: center; justify-content: space-between; }
+    /* Кастомный выпадающий список для гарантированной работы на смартфонах */
+    .custom-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #3498db;
+      border-radius: 0 0 6px 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      display: none;
+    }
+
+    .dropdown-item {
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:active, .dropdown-item:hover {
+      background-color: #eef7fe;
+      color: #2980b9;
+    }
+
+    .selected-box { 
+      margin-top: 8px; 
+      background: #eef7fe; 
+      border: 1px solid #bce1fe; 
+      padding: 10px; 
+      border-radius: 6px; 
+      font-weight: bold; 
+      font-size: 0.95rem; 
+      min-height: 40px; 
+      display: flex; 
+      align-items: center; 
+    }
     
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
     .btn-full { grid-column: span 2; }
 
-    button { padding: 12px; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+    button { 
+      padding: 11px; 
+      border: none; 
+      border-radius: 6px; 
+      font-size: 0.9rem; 
+      font-weight: 600; 
+      cursor: pointer; 
+      transition: background 0.2s; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+    }
     button:active { opacity: 0.8; }
     
     .btn-primary { background: #27ae60; color: white; }
@@ -31,9 +126,25 @@
     .btn-secondary { background: #7f8c8d; color: white; }
     .btn-stat { background: #8e44ad; color: white; }
 
-    textarea { width: 100%; height: 160px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; resize: none; margin-top: 6px; font-family: monospace; }
+    /* Поле текста занимает все доступное пространство карточки */
+    textarea { 
+      width: 100%; 
+      flex: 1;
+      padding: 10px; 
+      border: 1px solid #ccc; 
+      border-radius: 6px; 
+      font-size: 0.9rem; 
+      resize: none; 
+      font-family: monospace; 
+      outline: none;
+    }
 
-    .status { font-size: 0.8rem; text-align: center; color: #7f8c8d; min-height: 18px; }
+    .status { 
+      font-size: 0.8rem; 
+      text-align: center; 
+      color: #7f8c8d; 
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -41,16 +152,18 @@
   <h2>Учет явки</h2>
 
   <div class="card">
-    <label for="nameInput">Поиск из списка:</label>
-    <input type="text" id="nameInput" list="namesList" placeholder="Введите имя или часть символов..." autocomplete="off">
-    <datalist id="namesList"></datalist>
+    <label for="nameInput">Поиск по списку:</label>
+    <div class="search-container">
+      <input type="text" id="nameInput" placeholder="Введите имя или часть символов..." autocomplete="off">
+      <div id="dropdownList" class="custom-dropdown"></div>
+    </div>
 
     <div class="selected-box" id="selectedBox">Выберите человека из списка</div>
 
-    <button class="btn-primary btn-full" style="margin-top: 10px;" id="btnMark">Отметить</button>
+    <button class="btn-primary btn-full" style="margin-top: 8px;" id="btnMark">Отметить</button>
   </div>
 
-  <div class="card">
+  <div class="card card-output">
     <div class="btn-grid">
       <button class="btn-info" id="btnReport">Отчёт</button>
       <button class="btn-warning" id="btnAbsent">Отсутствующие</button>
@@ -70,14 +183,14 @@
     let selectedPerson = null;
 
     const nameInput = document.getElementById('nameInput');
-    const namesList = document.getElementById('namesList');
+    const dropdownList = document.getElementById('dropdownList');
     const selectedBox = document.getElementById('selectedBox');
     const outputArea = document.getElementById('outputArea');
     const statusText = document.getElementById('statusText');
 
     window.addEventListener('DOMContentLoaded', loadData);
 
-    // Функция отправки запросов через JSONP (универсально для file:// и GitHub Pages)
+    // Вспомогательная функция отправки запросов по JSONP
     function sendJsonpRequest(params, callbackName) {
       const oldScript = document.getElementById('jsonp-req');
       if (oldScript) oldScript.remove();
@@ -89,14 +202,11 @@
       queryParams.append('callback', callbackName);
       
       script.src = `${GAS_URL}?${queryParams.toString()}`;
-      script.onerror = () => {
-        setStatus("Ошибка соединения с сервером");
-      };
+      script.onerror = () => { setStatus("Ошибка соединения с сервером"); };
 
       document.body.appendChild(script);
     }
 
-    // Загрузка списка
     function loadData() {
       setStatus("Обновление списка...");
       sendJsonpRequest({ action: 'getData' }, 'handleDataResponse');
@@ -104,7 +214,6 @@
 
     window.handleDataResponse = function(data) {
       dbData = data;
-      renderDropdown(nameInput.value);
       setStatus("Данные обновлены");
     };
 
@@ -112,72 +221,89 @@
       statusText.textContent = text;
     }
 
-    // Рендер выпадающего списка
+    // Отрисовка кастомного списка подсказок
     function renderDropdown(filterQuery = "") {
-      namesList.innerHTML = '';
+      dropdownList.innerHTML = '';
       const query = filterQuery.trim().toLowerCase();
-      
+
+      // Фильтрация: is != 1 и подстрока в любом месте имени
       const availablePersons = dbData.filter(item => {
         const isNotPresent = String(item.is) !== "1";
         const matchesQuery = query === "" || String(item.name).toLowerCase().includes(query);
         return isNotPresent && matchesQuery;
       });
 
+      if (availablePersons.length === 0) {
+        dropdownList.style.display = 'none';
+        return;
+      }
+
       availablePersons.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.name;
-        namesList.appendChild(opt);
+        const div = document.createElement('div');
+        div.className = 'dropdown-item';
+        div.textContent = `${item.id}. ${item.name}`;
+        
+        // Выбор элемента при клике / тапе
+        div.addEventListener('click', () => {
+          selectedPerson = item;
+          nameInput.value = item.name;
+          selectedBox.textContent = `ID: ${item.id} | ${item.name}`;
+          dropdownList.style.display = 'none';
+        });
+
+        dropdownList.appendChild(div);
       });
+
+      dropdownList.style.display = 'block';
     }
 
-    // Обработка ввода
+    // Обработка ввода в поле поиска
     nameInput.addEventListener('input', () => {
-      const val = nameInput.value;
-      renderDropdown(val);
+      selectedPerson = null;
+      selectedBox.textContent = "Выберите человека из списка";
+      renderDropdown(nameInput.value);
+    });
 
-      const found = dbData.find(item => item.name === val && String(item.is) !== "1");
-      if (found) {
-        selectedPerson = found;
-        selectedBox.textContent = `ID: ${found.id} | ${found.name}`;
-      } else {
-        selectedPerson = null;
-        selectedBox.textContent = "Выберите человека из списка";
+    nameInput.addEventListener('focus', () => {
+      renderDropdown(nameInput.value);
+    });
+
+    // Скрытие выпадающего списка при клике вне его
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-container')) {
+        dropdownList.style.display = 'none';
       }
     });
 
-    // Нажатие кнопки "Отметить"
+    // Кнопка "Отметить"
     document.getElementById('btnMark').addEventListener('click', () => {
       if (!selectedPerson) {
-        alert("Сначала выберите человека из списка!");
+        alert("Сначала выберите человека из выпадающего списка!");
         return;
       }
 
       const personToMark = selectedPerson;
-      setStatus("Сохранение отметки в Google Таблицу...");
+      setStatus("Сохранение отметки...");
 
-      // Отправляем GET-запрос на регистрацию отметки
       sendJsonpRequest({ action: 'mark', id: personToMark.id }, 'handleMarkResponse');
 
-      // Выводим отмеченного человека в нижнее поле вывода
       outputArea.value = `Отмечен: ID ${personToMark.id}. ${personToMark.name}`;
 
-      // Локальное обновление состояния UI
       personToMark.is = 1;
       nameInput.value = '';
       selectedPerson = null;
       selectedBox.textContent = "Успешно отмечено!";
-      renderDropdown();
+      dropdownList.style.display = 'none';
     });
 
     window.handleMarkResponse = function(response) {
       if (response && response.status === "success") {
         setStatus("Отметка успешно записана в таблицу");
-        // Синхронизируем свежие данные через 1 секунду
         setTimeout(loadData, 1000);
       }
     };
 
-    // Отчёт
+    // Кнопка "Отчёт"
     document.getElementById('btnReport').addEventListener('click', () => {
       setStatus("Формирование отчета...");
       const toReport = dbData.filter(item => String(item.is) === "1" && String(item.report) !== "1");
@@ -186,19 +312,18 @@
         outputArea.value = "Нет новых записей для отчета.";
       } else {
         outputArea.value = toReport.map(item => `${item.id}. ${item.name}`).join('\n');
-        // Отправляем команду на запись report = 1
         sendJsonpRequest({ action: 'makeReport' }, 'handleReportResponse');
       }
     });
 
     window.handleReportResponse = function(response) {
       if (response && response.status === "success") {
-        setStatus("Отчет сформирован и сохранен в таблице");
+        setStatus("Отчет сформирован и сохранен");
         setTimeout(loadData, 1000);
       }
     };
 
-    // Отсутствующие
+    // Кнопка "Отсутствующие"
     document.getElementById('btnAbsent').addEventListener('click', () => {
       const absent = dbData.filter(item => String(item.is) !== "1");
       if (absent.length === 0) {
@@ -209,7 +334,7 @@
       setStatus("Выведен список отсутствующих");
     });
 
-    // Копировать
+    // Кнопка "Копировать"
     document.getElementById('btnCopy').addEventListener('click', () => {
       if (!outputArea.value) {
         alert("Поле вывода пустое!");
@@ -224,7 +349,7 @@
       });
     });
 
-    // Статистика
+    // Кнопка "Статистика"
     document.getElementById('btnStats').addEventListener('click', () => {
       const total = dbData.length || 140;
       const presentCount = dbData.filter(item => String(item.is) === "1").length;
