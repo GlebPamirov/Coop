@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Явка</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f4f6f8; color: #333; padding: 12px; display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: 0 auto; }
+    
+    h2 { text-align: center; color: #2c3e50; font-size: 1.2rem; }
+    
+    .card { background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    
+    label { font-size: 0.85rem; font-weight: 600; color: #666; display: block; margin-bottom: 4px; }
+    
+    input[list] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; outline: none; }
+    input[list]:focus { border-color: #3498db; }
+
+    .selected-box { margin-top: 10px; background: #eef7fe; border: 1px solid #bce1fe; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 0.95rem; min-height: 42px; display: flex; align-items: center; justify-content: space-between; }
+    
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .btn-full { grid-column: span 2; }
+
+    button { padding: 12px; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+    button:active { opacity: 0.8; }
+    
+    .btn-primary { background: #27ae60; color: white; }
+    .btn-info { background: #2980b9; color: white; }
+    .btn-warning { background: #e67e22; color: white; }
+    .btn-secondary { background: #7f8c8d; color: white; }
+    .btn-stat { background: #8e44ad; color: white; }
+
+    textarea { width: 100%; height: 160px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; resize: none; margin-top: 6px; font-family: monospace; }
+
+    .status { font-size: 0.8rem; text-align: center; color: #7f8c8d; min-height: 18px; }
+    .loader { display: inline-block; animation: spin 1s infinite linear; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <h2>Учет явки</h2>
+
+  <div class="card">
+    <label for="nameInput">Поиск / Выбор (нет в "is"):</label>
+    <input type="text" id="nameInput" list="namesList" placeholder="Начните вводить имя..." autocomplete="off">
+    <datalist id="namesList"></datalist>
+
+    <div class="selected-box" id="selectedBox">Выберете человека из списка</div>
+
+    <button class="btn-primary btn-full" style="margin-top: 10px;" id="btnMark">a) Отметить (is = 1)</button>
+  </div>
+
+  <div class="card">
+    <div class="btn-grid">
+      <button class="btn-info" id="btnReport">b) Отчёт</button>
+      <button class="btn-warning" id="btnAbsent">c) Отсутствующие</button>
+      <button class="btn-secondary" id="btnCopy">d) Копировать</button>
+      <button class="btn-stat" id="btnStats">e) Статистика</button>
+    </div>
+    
+    <textarea id="outputArea" readonly placeholder="Результат действий выводится сюда..."></textarea>
+  </div>
+
+  <div class="status" id="statusText">Загрузка данных...</div>
+
+  <script>
+    // URL вашего развернутого Google Apps Script Веб-приложения
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxj4gHugal4GuwB2x_fbhig0nF7mbbf_VRTnGn7epm-jpc-4XmslZqIc1wtmrZ7qYnlFA/exec";
+	//Идентификатор развертывания
+	//AKfycbxj4gHugal4GuwB2x_fbhig0nF7mbbf_VRTnGn7epm-jpc-4XmslZqIc1wtmrZ7qYnlFA
+
+    let dbData = [];
+    let selectedPerson = null;
+
+    const nameInput = document.getElementById('nameInput');
+    const namesList = document.getElementById('namesList');
+    const selectedBox = document.getElementById('selectedBox');
+    const outputArea = document.getElementById('outputArea');
+    const statusText = document.getElementById('statusText');
+
+    // Инициализация при загрузке
+    window.addEventListener('DOMContentLoaded', loadData);
+
+    async function loadData() {
+      setStatus("Обновление списка...");
+      try {
+        const res = await fetch(`${GAS_URL}?action=getData`);
+        dbData = await res.json();
+        renderDropdown();
+        setStatus("Данные обновлены");
+      } catch (err) {
+        setStatus("Ошибка загрузки данных");
+        console.error(err);
+      }
+    }
+
+    function setStatus(text) {
+      statusText.textContent = text;
+    }
+
+    // Заполнение выпадающего списка только теми, у кого is == 0
+    function renderDropdown() {
+      namesList.innerHTML = '';
+      const filtered = dbData.filter(item => String(item.is) !== "1");
+      filtered.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.name;
+        namesList.appendChild(opt);
+      });
+    }
+
+    // Событие выбора из выпадающего списка
+    nameInput.addEventListener('input', () => {
+      const val = nameInput.value;
+      const found = dbData.find(item => item.name === val && String(item.is) !== "1");
+      if (found) {
+        selectedPerson = found;
+        selectedBox.textContent = `ID: ${found.id} | ${found.name}`;
+      } else {
+        selectedPerson = null;
+        selectedBox.textContent = "Выберите человека из списка";
+      }
+    });
+
+    // a) Отметить
+    document.getElementById('btnMark').addEventListener('click', async () => {
+      if (!selectedPerson) {
+        alert("Сначала выберите человека из выпадающего списка!");
+        return;
+      }
+      setStatus("Сохранение отметки...");
+      try {
+        await fetch(GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'mark', id: selectedPerson.id })
+        });
+        
+        // Локальное обновление и сброс
+        selectedPerson.is = 1;
+        nameInput.value = '';
+        selectedPerson = null;
+        selectedBox.textContent = "Успешно отмечено!";
+        
+        // Пересборка списка
+        renderDropdown();
+        setStatus("Отметка поставлена");
+        
+        // Синхронизируем свежие данные
+        setTimeout(loadData, 1000);
+      } catch (err) {
+        setStatus("Ошибка отправки");
+      }
+    });
+
+    // b) Отчёт
+    document.getElementById('btnReport').addEventListener('click', async () => {
+      setStatus("Формирование отчета...");
+      // Фильтруем те, у кого is=1, но report!=1
+      const toReport = dbData.filter(item => String(item.is) === "1" && String(item.report) !== "1");
+      
+      let textResult = "";
+      if (toReport.length === 0) {
+        textResult = "Нет новых записей для отчета.";
+      } else {
+        textResult = toReport.map(item => `${item.id}. ${item.name}`).join('\n');
+      }
+      
+      outputArea.value = textResult;
+
+      // Отправляем запрос в GAS на проставление 1 в report для этих ID
+      try {
+        await fetch(GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'makeReport' })
+        });
+        setStatus("Отчет сформирован");
+        setTimeout(loadData, 1000);
+      } catch (err) {
+        setStatus("Ошибка при формировании отчета");
+      }
+    });
+
+    // c) Отсутствующие
+    document.getElementById('btnAbsent').addEventListener('click', () => {
+      const absent = dbData.filter(item => String(item.is) !== "1");
+      if (absent.length === 0) {
+        outputArea.value = "Отсутствующих нет (все присутствуют).";
+      } else {
+        outputArea.value = absent.map(item => `${item.id}. ${item.name}`).join('\n');
+      }
+      setStatus("Выведен список отсутствующих");
+    });
+
+    // d) Копировать
+    document.getElementById('btnCopy').addEventListener('click', () => {
+      if (!outputArea.value) {
+        alert("Поле отчета пустое!");
+        return;
+      }
+      outputArea.select();
+      navigator.clipboard.writeText(outputArea.value).then(() => {
+        setStatus("Скопировано в буфер обмена!");
+      }).catch(() => {
+        document.execCommand('copy');
+        setStatus("Скопировано!");
+      });
+    });
+
+    // e) Статистика
+    document.getElementById('btnStats').addEventListener('click', () => {
+      const total = dbData.length || 140; // Если пустая таблица, рассчитываем из 140
+      const presentCount = dbData.filter(item => String(item.is) === "1").length;
+      const percent = ((presentCount / total) * 100).toFixed(1);
+
+      outputArea.value = `--- СТАТИСТИКА ---\n` +
+                         `Всего в списке: ${total}\n` +
+                         `Присутствуют (is=1): ${presentCount}\n` +
+                         `Процент явки: ${percent}%`;
+      setStatus("Статистика рассчитана");
+    });
+  </script>
+</body>
+</html>
